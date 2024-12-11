@@ -32,7 +32,6 @@ end
 
 -- Вывод поля на экран с цветами
 function Game:dump()
-    print("Вывод поля:")
     print("    1 2 3 4 5 6 7 8 9 10")
     print("- - - - - - - - - - - -- ")
     for i = 1, 10 do
@@ -52,32 +51,34 @@ end
 
 -- Выполнение тика (проверка на наличие троек и их удаление)
 function Game:tick()
-    local changed = false
-    -- Проверка на вертикальные троики
-    for i = 1, 10 do
-        for j = 1, 8 do
-            if self.field[j][i] == self.field[j + 1][i] and self.field[j][i] == self.field[j + 2][i] then
-                self:clearVertical(j, i)
-                changed = true
+    local changed
+    repeat
+        changed = false
+        -- Проверка на вертикальные троики
+        for i = 1, 10 do
+            for j = 1, 8 do
+                if self.field[j][i] == self.field[j + 1][i] and self.field[j][i] == self.field[j + 2][i] then
+                    self:clearVertical(j, i)
+                    changed = true
+                end
             end
         end
-    end
-    -- Проверка на горизонтальные троики
-    for i = 1, 8 do
-        for j = 1, 10 do
-            if self.field[i][j] == self.field[i][j + 1] and self.field[i][j] == self.field[i][j + 2] then
-                self:clearHorizontal(i, j)
-                changed = true
+        -- Проверка на горизонтальные троики
+        for i = 1, 8 do
+            for j = 1, 10 do
+                if self.field[i][j] == self.field[i][j + 1] and self.field[i][j] == self.field[i][j + 2] then
+                    self:clearHorizontal(i, j)
+                    changed = true
+                end
             end
         end
-    end
-    if changed then
-        self:dropDown()
-        self:addNewCrystals()
-        return true
-    else
-        return false
-    end
+
+        -- Если были изменения, обновляем поле
+        if changed then
+            self:dropDown()
+            self:addNewCrystals()
+        end
+    until not changed
 end
 
 -- Очистка вертикальной линии
@@ -224,9 +225,7 @@ function main()
     game:init()
 
     -- Первый вывод поля
-    while game:tick() do
-        game:tick()
-    end
+    game:tick()
     game:dump()
 
     while true do
@@ -262,10 +261,8 @@ function main()
 
                 if validMove then
                     -- Проверяем наличие совпадений
-                    local flagTick = game:tick()
-                    while flagTick do
-                        flagTick = game:tick()
-                    end
+                    game:tick()
+
 
                     -- Выводим поле
                     game:dump()
@@ -276,8 +273,6 @@ function main()
                         game:mix()
                         game:dump()
                     end
-                else
-                    print("Некорректное перемещение.")
                 end
             end
         else
