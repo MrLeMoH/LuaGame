@@ -258,21 +258,26 @@ function main()
 
             if to then
                 print(string.format("Перемещение с [%d, %d] на [%d, %d]", y, x, to[2], to[1]))
-                game:move({ x, y }, to)
+                local validMove = game:move({ x, y }, to)
 
-                local flagTick = game:tick()
-                if flagTick then
-                    flagTick = game:tick()
-                end
+                if validMove then
+                    -- Проверяем наличие совпадений
+                    local flagTick = game:tick()
+                    while flagTick do
+                        flagTick = game:tick()
+                    end
 
-                -- Выводим поле
-                game:dump()
-
-                -- Если поле без изменений, перемешиваем
-                if not game:checkForMoves() then
-                    print("Нет возможных ходов, поле перемешано.")
-                    game:mix()
+                    -- Выводим поле
                     game:dump()
+
+                    -- Проверяем доступные ходы
+                    if not game:checkForMoves() then
+                        print("Нет возможных ходов, поле перемешано.")
+                        game:mix()
+                        game:dump()
+                    end
+                else
+                    print("Некорректное перемещение.")
                 end
             end
         else
