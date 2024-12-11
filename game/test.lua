@@ -1,8 +1,20 @@
-math.randomseed(os.time()) -- Инициализация генератора случайных чисел
+-- Инициализация генератора случайных чисел
+math.randomseed(os.time())
 
 -- Класс для игры
 Game = {}
 Game.__index = Game
+
+-- Цвета для каждого типа кристалла
+local colorCodes = {
+    A = "\27[31m", -- Красный
+    B = "\27[32m", -- Зеленый
+    C = "\27[33m", -- Желтый
+    D = "\27[34m", -- Синий
+    E = "\27[35m", -- Фиолетовый
+    F = "\27[36m"  -- Голубой
+}
+local resetCode = "\27[0m" -- Сброс цвета
 
 -- Инициализация поля
 function Game:init()
@@ -18,21 +30,21 @@ function Game:init()
     end
 end
 
--- Вывод поля на экран
+-- Вывод поля на экран с цветами
 function Game:dump()
     print("Вывод поля:")
     print("    1 2 3 4 5 6 7 8 9 10")
     print("- - - - - - - - - - - -- ")
     for i = 1, 10 do
-        if i == 10
-        then
+        if i == 10 then
             io.write(i .. "| ")
         else
             io.write(i .. " | ")
         end
-        -- Для вывода индексов с 0
         for j = 1, 10 do
-            io.write(self.field[i][j] .. " ")
+            local crystal = self.field[i][j]
+            local color = colorCodes[crystal] or resetCode
+            io.write(color .. crystal .. resetCode .. " ")
         end
         print()
     end
@@ -40,7 +52,6 @@ end
 
 -- Выполнение тика (проверка на наличие троек и их удаление)
 function Game:tick()
-    print("Выполнение тика...")  -- Добавим отладочную печать
     local changed = false
     -- Проверка на вертикальные троики
     for i = 1, 10 do
@@ -69,7 +80,6 @@ function Game:tick()
     end
 end
 
-
 -- Очистка вертикальной линии
 function Game:clearVertical(row, col)
     self.field[row][col] = nil
@@ -87,18 +97,15 @@ end
 -- Смещение кристаллов вниз
 function Game:dropDown()
     for col = 1, 10 do
-        local emptyRows = {}
-        -- Собираем пустые строки
-        for row = 1, 10 do
+        for row = 10, 2, -1 do
             if not self.field[row][col] then
-                table.insert(emptyRows, row)
-            end
-        end
-        -- Перемещаем кристаллы вниз
-        for _, row in ipairs(emptyRows) do
-            for r = row, 2, -1 do
-                self.field[r][col] = self.field[r - 1][col]
-                self.field[r - 1][col] = nil
+                for r = row - 1, 1, -1 do
+                    if self.field[r][col] then
+                        self.field[row][col] = self.field[r][col]
+                        self.field[r][col] = nil
+                        break
+                    end
+                end
             end
         end
     end
@@ -125,16 +132,20 @@ function Game:move(from, to)
             self.field[toX] and self.field[toX][toY] then
         -- Меняем местами кристаллы
         self.field[toX][toY], self.field[fromX][fromY] = self.field[fromX][fromY], self.field[toX][toY]
+        return true
     else
         print("Некорректное перемещение.")
+        return false
     end
 end
+
 
 -- Перемешивание поля
 function Game:mix()
     self:init()
 end
 
+-- Проверка на доступные ходы
 function Game:checkForMoves()
     local directions = {
         { 0, 1 }, -- Вправо
@@ -208,49 +219,50 @@ function Game:hasMatch(i, j)
 end
 
 function main()
-    print("Игра началась!")  -- Выводим сообщение
+    print("Игра началась!")
     local game = setmetatable({}, Game)
     game:init()
 
     -- Первый вывод поля
-
     while game:tick() do
-        game:tick() -- Выполняем первый тик
+        game:tick()
     end
     game:dump()
 
     while true do
         print("Введите ход (например, 'm x y r' для перемещения или 'q' для выхода):")
-        io.flush()  -- Принудительно сбрасываем буфер перед чтением
+        io.flush()
         local input = io.read()
 
         if input == "q" then
             print("Выход из игры.")
             break
         elseif input:match("m (%d+) (%d+) ([lrud])") then
-            local x, y, dir = input:match("m (%d+) (%d+) ([lrud])")
+            local y, x, dir = input:match("m (%d+) (%d+) ([lrud])")
             x, y = tonumber(x), tonumber(y)
+
             -- Определяем новую позицию в зависимости от направления
             local to
-            if dir == 'l' and x > 1 then
-                to = { x - 1, y }  -- Влево
-            elseif dir == 'r' and x <= 10 then
-                to = { x + 1, y }  -- Вправо
-            elseif dir == 'u' and y > 1 then
-                to = { x, y - 1 }  -- Вверх
-            elseif dir == 'd' and y <= 10 then
-                to = { x, y + 1 }  -- Вниз
+            if dir == 'l' then
+                to = { x, y - 1 } -- Влево
+            elseif dir == 'r' then
+                to = { x, y + 1 } -- Вправо
+            elseif dir == 'u' then
+                to = { x - 1, y } -- Вверх
+            elseif dir == 'd' then
+                to = { x + 1, y } -- Вниз
             else
                 print("Некорректный ход: выход за границы игрового поля.")
                 return
             end
 
             if to then
-                print(string.format("Перемещение с [%d, %d] на [%d, %d]", x, y, to[1], to[2]))
+                print(string.format("Перемещение с [%d, %d] на [%d, %d]", y, x, to[2], to[1]))
                 game:move({ x, y }, to)
-                -- Выполняем тик
-                while game:tick() do
-                    game:tick() -- Выполняем первый тик
+
+                local flagTick = game:tick()
+                if flagTick then
+                    flagTick = game:tick()
                 end
 
                 -- Выводим поле
@@ -268,7 +280,4 @@ function main()
         end
     end
 end
-
 main()
-
-
